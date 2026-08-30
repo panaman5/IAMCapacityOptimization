@@ -1,0 +1,519 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[a4paper,margin=25mm,headheight=24pt]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{titlesec}
+
+\setlength{\headheight}{24pt}
+
+\definecolor{navy}{HTML}{102A43}
+\definecolor{bodyblue}{HTML}{243B53}
+\definecolor{muted}{HTML}{486581}
+\definecolor{ruleblue}{HTML}{D9E2EC}
+\definecolor{boxblue}{HTML}{F0F4F8}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=navy,
+  urlcolor=navy,
+  pdftitle={Capacity Model - Mathematical Specification},
+  pdfauthor={Project Optimus}
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\textcolor{muted}{Capacity Model | Project Optimus}}
+\rhead{\textcolor{muted}{Mathematical Specification}}
+\cfoot{\textcolor{muted}{\thepage}}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{ruleblue}\leaders\hrule height \headrulewidth\hfill}}
+
+\titleformat{\section}{\Large\bfseries\color{navy}}{\thesection.}{0.6em}{}
+\titleformat{\subsection}{\large\bfseries\color{bodyblue}}{\thesubsection}{0.6em}{}
+\setlist[itemize]{leftmargin=8mm,itemsep=1pt,topsep=3pt}
+\setlist[enumerate]{leftmargin=8mm,itemsep=2pt,topsep=3pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\color{bodyblue}
+
+\newcommand{\equationnote}[1]{\begin{center}\colorbox{boxblue}{\parbox{0.92\linewidth}{\begin{equation*}#1\end{equation*}}}\end{center}}
+
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  \vspace*{35mm}
+  {\Huge\bfseries\color{navy} Capacity Model\\[4mm] Mathematical Specification\par}
+  \vspace{10mm}
+  {\large\color{muted} A LaTeX-compiled research specification\par}
+  \vspace{25mm}
+  \fcolorbox{ruleblue}{boxblue}{\begin{tabular}{ccc}
+    \textbf{Project Optimus} & \textbf{Version 0.1} & \textbf{Research prototype}
+  \end{tabular}}
+  \vfill
+  {\color{muted}Discrete-time capacity planning under uncertain demand\par}
+\end{titlepage}
+
+\section{Purpose}
+
+This document specifies a small capacity-planning model for Project Optimus. The model is intended to be understandable, reproducible, and extensible. Its purpose is not to claim that one probabilistic model is universally superior to a neural or language model. Its purpose is to establish a decision problem in which alternative predictive and decision approaches can be compared fairly.
+
+The central research question is:
+
+\begin{quote}\textbf{In which capacity decisions does an explicit model of objectives, constraints, uncertainty, and system dynamics add measurable value beyond simpler rules or a predictive model alone?}\end{quote}
+
+\section{Decision definition}
+
+The decision-maker chooses a capacity level $c$ before observing future demand. Capacity may represent workers, machines, service slots, compute resources, or another repeatable operational resource.
+
+Let:
+\begin{itemize}
+  \item $t = 0, 1, \ldots, T-1$ index discrete planning periods;
+  \item $N_t$ be new demand arriving during period $t$;
+  \item $B_t$ be backlog at the beginning of period $t$;
+  \item $c_t$ be capacity available during period $t$;
+  \item $S_t$ be work completed during period $t$;
+  \item $D_t$ be unmet demand remaining after service; and
+  \item $a_t$ be the capacity action selected by the decision-maker.
+\end{itemize}
+
+For the initial stationary model, capacity is constant:
+
+\equationnote{c_t = c, \qquad c \in \mathcal{C}}
+
+where $\mathcal{C}$ is a finite feasible set, for example $\{0,1,\ldots,c_{\max}\}$.
+
+\section{State transition}
+
+The initial model assumes that one unit of capacity can process one unit of work during a period. Total work available at the beginning of period $t$ is $B_t + N_t$. Therefore:
+
+\equationnote{S_t = \min(B_t + N_t, c)}
+
+and the next-period backlog is:
+
+\equationnote{B_{t+1} = B_t + N_t - S_t}
+
+Equivalently:
+
+\equationnote{B_{t+1} = \max(0, B_t + N_t - c)}
+
+with initial condition $B_0 \geq 0$. If a period's arrivals are served immediately whenever capacity is available, the same transition can be written as a reflected workload recursion.
+
+The cumulative unmet work over a horizon is:
+
+\equationnote{U_T(c) = \sum_{t=0}^{T-1} B_{t+1}}
+
+This quantity is a simple proxy for delay exposure. A later version may replace it with customer-level waiting time or an explicit service-time model.
+
+\section{Demand uncertainty}
+
+Demand is represented by the random sequence:
+
+\equationnote{N_0, N_1, \ldots, N_{T-1}}
+
+The first implementation should support two sources:
+\begin{enumerate}
+  \item \textbf{Empirical demand:} resampling or replaying observed period-level counts.
+  \item \textbf{Synthetic demand:} generating counts from a documented data-generating process.
+\end{enumerate}
+
+For empirical demand, the estimated probability of observing $n$ arrivals is:
+
+\equationnote{\widehat{P}(N=n) = \frac{\left|\{t : N_t=n\}\right|}{T}}
+
+Here $\left|\{t : N_t=n\}\right|$ denotes the number of observed periods in which the demand equals $n$. This empirical distribution is a baseline, not evidence that demand is independent or identically distributed.
+
+For a candidate Poisson model:
+
+\equationnote{N_t \sim \operatorname{Poisson}(\lambda)}
+
+where $\lambda$ is the expected demand per period. This assumption must be tested against the data and compared with the empirical alternative. Seasonality, bursts, serial dependence, regime changes, and common shocks may make a stationary Poisson model inappropriate.
+
+If demand varies with context $X_t$, a conditional model may instead estimate:
+
+\equationnote{P(N_t \mid X_t)}
+
+The predictive model may be statistical, machine-learning-based, or neural. The decision layer should consume its predictive distribution or scenarios rather than treating a point forecast as certainty.
+
+\subsection{Initial implementation choice}
+
+The first implementation will use a theoretical Poisson demand generator rather than waiting for real operational data. This is a synthetic, controlled experiment. It is intended to test the mechanics of the model, not to make a claim about any particular business system.
+
+The initial demand assumptions are:
+\begin{itemize}
+  \item arrivals are independent across periods;
+  \item the average arrival rate is stable;
+  \item demand variance equals its mean; and
+  \item there is no seasonality, burstiness, or regime change.
+\end{itemize}
+
+The parameter $\lambda$ is treated as a controlled input for the experiment. We will evaluate several values of $\lambda$, rather than relying on one arbitrary scenario. Real data is not required to understand the first model, but it is required before making claims about real-world performance.
+
+The implementation should keep the demand generator separate from the rest of the decision system:
+
+\equationnote{\text{demand generator} \rightarrow \text{backlog dynamics} \rightarrow \text{cost function} \rightarrow \text{capacity decision}}
+
+Later, the theoretical generator can be replaced or compared with an empirical generator while keeping the backlog, cost, and decision components unchanged. This makes the Poisson version a baseline against which richer demand models can be tested.
+
+\clearpage
+\section{First application: shared capacity with scheduled filler work}
+
+The first application extends the single-workload recursion to the IAM-style
+case discussed with the model: one shared capacity pool serves stochastic user
+demand first, and scheduled work receives whatever capacity remains.
+
+Let:
+
+\begin{itemize}
+  \item $U_t$ be new user-demand arrivals during period $t$;
+  \item $A^S_t$ be scheduled work released during period $t$;
+  \item $B^U_t$ be user-demand backlog at the beginning of period $t$; and
+  \item $B^S_t$ be scheduled-work backlog at the beginning of period $t$.
+\end{itemize}
+
+For a fixed capacity $c$, user demand is served first:
+
+\equationnote{S^U_t = \min(B^U_t + U_t, c)}
+
+The residual capacity is:
+
+\equationnote{R_t = c - S^U_t}
+
+Scheduled work uses that residual capacity:
+
+\equationnote{S^S_t = \min(B^S_t + A^S_t, R_t)}
+
+The two backlogs then evolve as:
+
+\equationnote{B^U_{t+1} = B^U_t + U_t - S^U_t}
+
+\equationnote{B^S_{t+1} = B^S_t + A^S_t - S^S_t}
+
+The first application deliberately treats scheduled work as a filler. It does
+not yet decide which scheduled job runs, and it does not use job importance,
+deadlines, dependencies, or sequencing. Its purpose is to answer a narrower
+question:
+
+\begin{quote}\textbf{Given a fixed capacity and stochastic user demand, how much capacity remains for scheduled work, and what backlog and cost does that create?}\end{quote}
+
+The implementation evaluates a candidate set of capacities against the same
+Poisson demand scenarios. This makes the comparison fair: capacity choices see
+the same possible demand paths, and the selected capacity is the one with the
+lowest estimated mean total cost.
+
+The baseline cost is:
+
+\equationnote{J(c) = C_{\text{capacity}}(c) + k_U \sum_{t=0}^{T-1} B^U_{t+1} + k_S \sum_{t=0}^{T-1} B^S_{t+1}}
+
+where $k_U$ penalizes user-demand backlog and $k_S$ penalizes scheduled-work
+backlog. User backlog receives the larger default penalty because user demand
+is protected. These weights are experimental inputs, not universal monetary
+truths.
+
+The runnable implementation is in the file src/capacity\_model.py, with a small entry
+point in run\_baseline.py. It uses only the Python standard library and
+generates reproducible synthetic scenarios.
+
+\clearpage
+\section{Realistic IAM application}
+
+The second application makes the baseline closer to an IAM operations queue
+without changing the central decision question. Time is measured in hourly
+periods, user demand has an hourly rate profile, and scheduled work consists
+of known jobs with workloads and deadlines.
+
+For user-driven demand:
+
+\equationnote{U_t \sim \operatorname{Poisson}(\lambda_t)}
+
+The hourly rate $\lambda_t$ is low overnight, higher during business hours,
+and highest during a defined peak window. The rate profile is synthetic and is
+explicitly reported with each experiment.
+
+Each scheduled job $j$ is described by:
+
+\begin{itemize}
+  \item release period $r_j$;
+  \item deadline period $d_j$; and
+  \item workload $w_j$.
+\end{itemize}
+
+For total hourly capacity $c$, user work is served first:
+
+\equationnote{S^U_t = \min(B^U_t + U_t, c)}
+
+Residual capacity is:
+
+\equationnote{R_t = c - S^U_t}
+
+Scheduled work is selected from released jobs using an earliest-deadline-first
+dispatch rule. If $S^S_t$ is scheduled work processed during period $t$:
+
+\equationnote{B^U_{t+1} = B^U_t + U_t - S^U_t}
+
+\equationnote{B^S_{t+1} = B^S_t + A^S_t - S^S_t}
+
+where $A^S_t$ is the workload released by scheduled jobs during period $t$.
+Jobs may finish after their deadline, but each job receives one deadline
+penalty when it is first observed to be incomplete at the end of its deadline
+period.
+
+The realistic application estimates the same total-capacity decision as the
+baseline:
+
+\equationnote{\widehat{J}(c) = \frac{1}{R}\sum_{r=1}^{R}\left[C_{\text{capacity}}(c) + k_U \sum_t B^{U,(r)}_{t+1} + k_S \sum_t B^{S,(r)}_{t+1} + k_D M^{(r)}\right]}
+
+where $M^{(r)}$ is the number of scheduled jobs that miss their deadlines in
+scenario $r$. The objective reports user fill rate, scheduled-work fill rate,
+scheduled backlog, deadline misses, and completed scheduled jobs.
+
+This version does not optimize the scheduled-job order. Earliest-deadline-first
+is a fixed dispatch baseline. The next optimization layer can decide which
+eligible scheduled jobs to process under residual capacity.
+
+\section{Cost function}
+
+The baseline total cost for a capacity choice $c$ and realized demand path is:
+
+\equationnote{C(c;N_{0:T-1}) = C_{\text{capacity}}(c) + \sum_{t=0}^{T-1} \left(C_{\text{backlog}}(B_{t+1}) + C_{\text{service}}(S_t)\right)}
+
+The first version may use:
+
+\equationnote{C_{\text{capacity}}(c) = k_c c}
+
+and:
+
+\equationnote{C_{\text{backlog}}(B_{t+1}) = k_b B_{t+1}}
+
+where $k_c \geq 0$ is the cost per unit of capacity and $k_b \geq 0$ is the cost per unit of period-end backlog.
+
+If backlog costs are nonlinear, a penalty function can be used:
+
+\equationnote{C_{\text{backlog}}(B) = k_b B + k_q \max(0, B-b_0)^2}
+
+where $b_0$ is a tolerated backlog threshold and $k_q$ penalizes severe overload.
+
+The exact monetary interpretation of each coefficient must be documented. If credible monetary values are not available, the experiment should report normalized costs and sensitivity over a range of weights.
+
+\section{Objective and constraints}
+
+The risk-neutral single-period or finite-horizon decision is:
+
+\equationnote{c^* = \arg\min_{c \in \mathcal{C}} \mathbb{E}\left[C(c;N_{0:T-1})\right]}
+
+For simulation, the expectation is approximated with $R$ demand scenarios:
+
+\equationnote{\widehat{J}(c) = \frac{1}{R}\sum_{r=1}^{R} C\left(c;N_{0:T-1}^{(r)}\right)}
+
+and:
+
+\equationnote{\widehat{c}^* = \arg\min_{c \in \mathcal{C}} \widehat{J}(c)}
+
+Capacity may also be selected subject to service requirements:
+
+\equationnote{\begin{aligned}\min_{c \in \mathcal{C}}\quad & \mathbb{E}[C(c;N)]\\[2pt]\text{subject to}\quad & P(B_{t+1} > b_{\max}) \leq \alpha\\ & P(\text{SLA violation}\mid c) \leq \alpha_{\text{SLA}}\end{aligned}}
+
+with optional budget constraint:
+
+\equationnote{C_{\text{capacity}}(c) \leq K}
+
+Here $b_{\max}$ is a tolerated backlog threshold, $\alpha$ is the allowed violation probability, and $K$ is the available capacity budget.
+
+\section{Service-level definitions}
+
+The specification must state which service-level definition is used. Candidate definitions include:
+\begin{itemize}
+  \item fraction of demand served within the same period;
+  \item fraction of periods with zero backlog;
+  \item fraction of demand completed within a specified number of periods; and
+  \item probability that backlog exceeds a threshold.
+\end{itemize}
+
+For the initial model, same-period service attainment is:
+
+\equationnote{\operatorname{FillRate}(c) = \frac{\sum_{t=0}^{T-1} S_t}{\sum_{t=0}^{T-1}(B_t+N_t)}}
+
+This metric should not be confused with a customer-level SLA. It is a workload-level approximation until individual arrival and completion timestamps are modeled.
+
+\section{Baselines and competing models}
+
+Every advanced model must be evaluated against the same scenarios, costs, constraints, and decision horizon.
+
+\subsection{Rule baseline}
+
+A simple policy may choose capacity using a demand quantile:
+
+\equationnote{c_q = \inf\{c : P(N \leq c) \geq q\}}
+
+This is useful as a transparent operational heuristic.
+
+\subsection{Empirical model}
+
+Use the empirical distribution of demand and optimize the expected cost directly. No parametric arrival assumption is required.
+
+\subsection{Parametric stochastic model}
+
+Fit a candidate distribution such as Poisson, negative binomial, or another justified family. Compare goodness of fit, calibration, tail behavior, and realized decision cost.
+
+\subsection{Dynamic or queueing model}
+
+If demand, service times, or state persistence matter, introduce a richer state and compare the resulting model with the simpler recursion. A queueing approximation such as $M/M/c$ is a later hypothesis, not a default requirement.
+
+\subsection{ML or foundation-model predictor}
+
+Use structured and contextual data to estimate future demand or outcomes. The predictor should be evaluated on held-out periods and then passed to the same decision objective where possible.
+
+\subsection{Hybrid model}
+
+The hybrid system may combine semantic extraction, statistical or ML prediction, simulation, and explicit optimization:
+
+\equationnote{\text{evidence} \rightarrow \text{prediction} \rightarrow \text{uncertainty} \rightarrow \text{optimization} \rightarrow \text{recommendation}}
+
+An LLM may help interpret documents, extract context, explain trade-offs, or orchestrate scenarios. It should not be assumed to replace the objective, constraints, simulator, or solver when those components provide measurable value.
+
+\section{Evaluation protocol}
+
+\subsection{Experimental split}
+
+Where historical data exists, use chronological separation:
+\begin{itemize}
+  \item training or calibration periods;
+  \item validation periods for model selection; and
+  \item a final evaluation period that remains untouched until comparison.
+\end{itemize}
+
+For synthetic data, generate independent scenario sets for development and evaluation using the same documented data-generating process. Add stress scenarios with deliberately changed assumptions.
+
+\subsection{Common evaluation conditions}
+
+All systems should receive the information available at decision time. The following must be held constant across models:
+\begin{itemize}
+  \item decision horizon;
+  \item feasible capacity choices;
+  \item cost coefficients;
+  \item service-level definitions;
+  \item scenario seeds or evaluation paths where appropriate; and
+  \item intervention and override rules.
+\end{itemize}
+
+\subsection{Primary outcomes}
+
+Report mean realized cost with uncertainty:
+
+\equationnote{\overline{C}_M = \frac{1}{R}\sum_{r=1}^{R} C_M^{(r)}}
+
+Also report quantiles, tail cost, service-level attainment, utilization, backlog, and compute or operational burden.
+
+Regret for model $M$ on scenario $r$ is:
+
+\equationnote{\operatorname{Regret}_M^{(r)} = C_M^{(r)} - \min_{c \in \mathcal{C}} C\left(c;N_{0:T-1}^{(r)}\right)}
+
+Average regret is:
+
+\equationnote{\overline{\operatorname{Regret}}_M = \frac{1}{R}\sum_{r=1}^{R}\operatorname{Regret}_M^{(r)}}
+
+The preferred model is the one that produces the best decision outcomes under the stated operating conditions, subject to acceptable reliability and interpretability.
+
+\section{Sensitivity and stress testing}
+
+At minimum, vary:
+\begin{itemize}
+  \item mean and variance of demand;
+  \item demand burstiness and serial correlation;
+  \item capacity cost $k_c$;
+  \item backlog cost $k_b$;
+  \item service-level target;
+  \item planning horizon $T$;
+  \item initial backlog $B_0$; and
+  \item the presence of demand regime changes.
+\end{itemize}
+
+The model should identify when the recommended capacity changes and which assumptions drive the change. A recommendation that is optimal only under one narrow parameter setting should be labeled fragile.
+
+\section{Assumptions and known limitations}
+
+The initial recursion assumes:
+\begin{itemize}
+  \item discrete and equally spaced time periods;
+  \item one unit of capacity processes one unit of work per period;
+  \item capacity is known during the evaluated period;
+  \item backlog is carried forward rather than discarded;
+  \item all work is initially treated as homogeneous;
+  \item the objective can be represented by an explicit cost function; and
+  \item the chosen demand scenarios are representative of the decision horizon.
+\end{itemize}
+
+These assumptions are simplifications. They are valuable only if they are sufficiently accurate for the decision being made. They may fail when the system includes heterogeneous jobs, priorities, abandonment, setup times, shift constraints, multi-stage service, correlated failures, or strategic capacity lead times.
+
+\section{Extension roadmap}
+
+Possible extensions, in increasing order of complexity, are:
+\begin{enumerate}
+  \item time-varying capacity $c_t$;
+  \item time-varying or seasonal demand;
+  \item heterogeneous service times;
+  \item priority classes and separate SLAs;
+  \item capacity activation and staffing constraints;
+  \item empirical Monte Carlo simulation;
+  \item queueing approximations;
+  \item Markov or state-space models;
+  \item stochastic or robust optimization;
+  \item contextual ML forecasting;
+  \item sequential decisions and MDP formulations; and
+  \item hybrid agent, simulation, and optimization workflows.
+\end{enumerate}
+
+For a sequential policy $\pi$, a general finite-horizon objective can be written as:
+
+\equationnote{\pi^* = \arg\min_{\pi} \mathbb{E}\left[\sum_{t=0}^{T-1} \gamma^t C(s_t,a_t)\right]}
+
+where $s_t$ is the system state, $a_t$ is the action, and $\gamma$ is an optional discount factor. This formulation should be introduced only when decisions genuinely depend on evolving state and future consequences.
+
+\section{Falsifiable hypotheses}
+
+The project should record hypotheses before running experiments. Initial examples are:
+\begin{enumerate}
+  \item An empirical demand model will outperform a misspecified stationary parametric model under regime changes.
+  \item Explicit backlog costs will produce better capacity choices than a demand-forecast-only rule.
+  \item A richer model will improve realized decision utility only when its additional assumptions are supported by data.
+  \item A hybrid predictor-plus-optimization system will outperform a predictor or LLM-only recommendation on constrained capacity decisions.
+  \item Under simple, well-specified demand, the added complexity of a hybrid system will not justify its operational cost.
+\end{enumerate}
+
+The fifth hypothesis is important. The project is successful even if it shows that a simpler model is the better choice.
+
+\section{Reproducibility requirements}
+
+Each experiment should record:
+\begin{itemize}
+  \item dataset or generator version;
+  \item random seeds;
+  \item time granularity and horizon;
+  \item capacity action set;
+  \item initial state;
+  \item cost and constraint parameters;
+  \item model version and configuration;
+  \item evaluation scenarios;
+  \item software environment; and
+  \item the decision made from the result.
+\end{itemize}
+
+Results should include the assumptions required to reproduce them, not only the final chart or selected capacity.
+
+\section{Decision criterion}
+
+The project does not have a preferred model family. The final selection rule is:
+
+\equationnote{M^* = \arg\min_M \left\{\text{realized decision cost}_M\right\}}
+
+subject to reliability, service, interpretability, and operational constraints.
+
+The intended outcome is better decisions under uncertainty. Probability, stochastic processes, Markov chains, queueing theory, optimization, simulation, machine learning, and language models are tools that may contribute to that outcome. None is an objective by itself.
+
+\end{document}

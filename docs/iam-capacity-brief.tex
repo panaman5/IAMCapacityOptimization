@@ -1,0 +1,123 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{xcolor}
+\usepackage{amsmath}
+
+\definecolor{navy}{HTML}{18324B}
+\definecolor{teal}{HTML}{167D8D}
+\definecolor{lightblue}{HTML}{EEF5F7}
+\definecolor{warm}{HTML}{FFF6E8}
+\definecolor{muted}{HTML}{566573}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{7pt}
+
+\newcommand{\highlight}[1]{%
+  \begin{center}
+  \fcolorbox{teal}{lightblue}{\parbox{0.90\textwidth}{\centering\large\bfseries\color{navy}#1}}
+  \end{center}}
+
+\begin{document}
+
+{\color{teal}\small DECISION INTELLIGENCE PROTOTYPE}\par\vspace{5pt}
+{\color{navy}\fontsize{26}{30}\selectfont\bfseries Capacity allocation\par}
+{\color{navy}\fontsize{26}{30}\selectfont\bfseries for an IAM operations queue\par}
+\vspace{8pt}
+{\color{muted}\large A plain-English look at choosing capacity when demand is uncertain.\par}
+\vspace{14pt}
+
+\highlight{How much hourly capacity should an IAM operations system keep available when user demand is uncertain and scheduled work is known in advance?}
+
+\section*{Why this question matters}
+
+Many operational systems have two kinds of work. User-driven requests arrive
+unpredictably. Other work is scheduled in advance: synchronizations, access
+reviews, reconciliations, exports, or policy updates.
+
+Both types use the same people or infrastructure. If capacity is too low,
+work waits and deadlines are missed. If capacity is too high, the system pays
+for resources that may sit unused.
+
+A forecast is useful, but it is not the decision. The decision also depends on
+service expectations, backlog, deadlines, and cost.
+
+\section*{The first model}
+
+The prototype represents one shared hourly capacity pool:
+
+\begin{itemize}
+  \item user-driven demand is generated stochastically;
+  \item user work is protected and served first;
+  \item scheduled jobs use the capacity that remains; and
+  \item unfinished work carries forward as backlog.
+\end{itemize}
+
+The current demonstration uses an hourly Poisson demand profile with lower
+overnight activity and a daytime peak. Scheduled jobs have a workload, a
+release time, and a deadline. Among eligible scheduled jobs, the simple
+baseline processes the earliest deadline first.
+
+\section*{The decision in one line}
+
+For each candidate hourly capacity $c$, the model simulates many possible
+demand paths and estimates the total cost:
+
+\begin{equation*}
+  \text{total cost} = \text{capacity cost}
+  + \text{backlog cost}
+  + \text{deadline penalties}.
+\end{equation*}
+
+The selected capacity is the candidate with the lowest estimated cost under
+the stated assumptions.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{p{0.27\textwidth} p{0.58\textwidth}}
+\hline
+\textbf{Model element} & \textbf{Meaning}\\
+\hline
+User demand & Uncertain work arriving during the hour\\
+Capacity & Maximum work units that can be processed during the hour\\
+Scheduled work & Known jobs competing for the remaining capacity\\
+Backlog & Work that carries into a later hour\\
+Cost & A way to express the trade-off between resources and waiting\\
+\hline
+\end{tabular}
+\end{center}
+
+\section*{What the experiment shows}
+
+Under the current illustrative assumptions, the simulation selects an hourly
+capacity of 17. This is not a recommendation for a real IAM deployment. It is
+a reproducible example showing how a capacity decision can balance competing
+consequences.
+
+More capacity improves service and reduces backlog, but it also costs more.
+Less capacity saves operating cost, but increases the chance that user work or
+scheduled work waits. The best point depends on how those consequences are
+valued.
+
+\begin{center}
+\fcolorbox{orange}{warm}{\parbox{0.88\textwidth}{\centering
+\textbf{Important:} The data and cost weights in this first version are
+synthetic and illustrative. The result demonstrates the mechanics of the
+decision; it does not describe a production IAM environment.}}
+\end{center}
+
+\section*{What comes next}
+
+The current version chooses the total capacity while keeping the scheduled-job
+rule fixed. The next meaningful extension is to decide which scheduled jobs
+should receive residual capacity, while continuing to protect user demand.
+
+After that, the same decision can be compared with simpler rules, forecasting
+models, and hybrid approaches using the same scenarios and evaluation metrics.
+
+The purpose is not to add mathematics for its own sake. It is to test whether
+additional structure produces a better operational decision.
+
+\end{document}

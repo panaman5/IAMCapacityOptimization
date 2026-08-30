@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+tmp/
+output/
+*.log
+.ipynb_checkpoints/
+.DS_Store
+*.egg-info/
+.pytest_cache/
+PUBLICATION_CHECKLIST.md
+PUBLICATION_OUTLINE.md
