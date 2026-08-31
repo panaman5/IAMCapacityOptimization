@@ -55,7 +55,6 @@ the decision rather than describing a real IAM deployment.
 - [tests/test_iam_capacity_model.py](tests/test_iam_capacity_model.py) - behavior and reproducibility tests.
 - [MODEL_SPEC.md](MODEL_SPEC.md) - detailed assumptions and equations.
 - [MODEL_SPEC.tex](MODEL_SPEC.tex) - LaTeX source for the detailed specification.
-- [hero-illustration.png](docs/hero-illustration.png) - the README hero illustration.
 - [iam-capacity-brief.tex](docs/iam-capacity-brief.tex) - LaTeX source for the two-page public explainer PDF.
 - [PUBLICATION_OUTLINE.md](PUBLICATION_OUTLINE.md) - longer-term research framing.
 
