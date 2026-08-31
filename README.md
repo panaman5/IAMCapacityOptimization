@@ -56,7 +56,7 @@ the decision rather than describing a real IAM deployment.
 - [MODEL_SPEC.md](MODEL_SPEC.md) - detailed assumptions and equations.
 - [MODEL_SPEC.tex](MODEL_SPEC.tex) - LaTeX source for the detailed specification.
 - [iam-capacity-brief.tex](docs/iam-capacity-brief.tex) - LaTeX source for the two-page public explainer PDF.
-- [PUBLICATION_OUTLINE.md](PUBLICATION_OUTLINE.md) - longer-term research framing.
+- [NEXT_PHASE_PLAN.md](NEXT_PHASE_PLAN.md) - handoff plan for the realistic model and AI phase.
 
 ## Current status
 
